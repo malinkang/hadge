@@ -133,7 +133,6 @@ class WorkoutViewController: EntireTableViewController {
         saveState()
         updateButtonState()
         updateStatus(string: "Export finished.")
-        clearStatusAfterDelay()
 
         exportSemaphore = false
         completionHandler()
@@ -257,19 +256,39 @@ class WorkoutViewController: EntireTableViewController {
     }
 
     func loadStatusView() {
-        statusLabel = UILabel(frame: CGRect.init(x: 0, y: 0, width: 200, height: 34))
+        statusLabel = PaddingLabel()
         statusLabel?.text = ""
         statusLabel?.textAlignment = NSTextAlignment.center
         statusLabel?.textColor = UIColor.secondaryLabel
         statusLabel?.font = UIFont.preferredFont(forTextStyle: .footnote)
         statusLabel?.lineBreakMode = .byWordWrapping
         statusLabel?.numberOfLines = 2
+        statusLabel?.preferredMaxLayoutWidth = 250
+
+        let statusContainer = UIView()
+        statusContainer.translatesAutoresizingMaskIntoConstraints = false
+        statusContainer.addSubview(statusLabel!)
+
+        NSLayoutConstraint.activate([
+            statusLabel!.leadingAnchor.constraint(equalTo: statusContainer.leadingAnchor, constant: 8),
+            statusLabel!.trailingAnchor.constraint(equalTo: statusContainer.trailingAnchor, constant: -8),
+            statusLabel!.topAnchor.constraint(equalTo: statusContainer.topAnchor),
+            statusLabel!.bottomAnchor.constraint(equalTo: statusContainer.bottomAnchor)
+        ])
+
+        let widthConstraint = statusContainer.widthAnchor.constraint(equalToConstant: 200)
+        widthConstraint.priority = .defaultLow
+        widthConstraint.isActive = true
 
         let statusItem = UIBarButtonItem(customView: statusLabel!)
+        statusItem.customView?.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        statusItem.customView?.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         exportButton = UIBarButtonItem(image: UIImage(systemName: "plus.app"), style: .plain, target: self, action: #selector(export(sender:)))
         exportButton?.tintColor = UIColor.secondaryLabel
+
         let leftSpaceItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
         let rightSpaceItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
         self.toolbarItems = [leftSpaceItem, statusItem, rightSpaceItem, exportButton]
 
         updateButtonState()
@@ -277,7 +296,6 @@ class WorkoutViewController: EntireTableViewController {
         if let exported = self.state["exported"] as? Bool, exported == true {
         } else {
             updateStatus(string: "Tap the ﹢ button to export this workout's samples to your repo.")
-            clearStatusAfterDelay()
         }
 
     }
