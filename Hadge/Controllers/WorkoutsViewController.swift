@@ -82,7 +82,11 @@ class WorkoutsViewController: EntireTableViewController {
 
         if let workout = data[indexPath.row]["workout"] as? HKWorkout? {
             cell?.titleLabel?.text = workout?.workoutActivityType.name
-            cell?.emojiLabel?.text = workout?.workoutActivityType.associatedEmoji(for: Health.shared().getBiologicalSex()!)
+            if let biologicalSex = Health.shared().getBiologicalSex() {
+                cell?.emojiLabel?.text = workout?.workoutActivityType.associatedEmoji(for: biologicalSex)
+            } else {
+                cell?.emojiLabel?.text = workout?.workoutActivityType.associatedEmoji
+            }
             cell?.setStartDate(workout!.startDate)
             cell?.setDistance(workout!.totalDistance)
             cell?.setDuration(workout!.duration)
