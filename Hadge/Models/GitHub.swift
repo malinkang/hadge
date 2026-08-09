@@ -34,19 +34,26 @@ class GitHub {
     func prepare() {
         keychain = Keychain(service: "io.entire.hadge.github-token")
         if (keychain!["token"] == nil) || (keychain!["token"]?.isEmpty)! {
-            let hasOAuthClient = !Secrets.gitHubClientId.contains("placeholder") &&
+            let hasOAuthClient = Secrets.gitHubClientId.count == 20 &&
+                Secrets.gitHubClientSecret.count == 40 &&
+                !Secrets.gitHubClientId.contains("placeholder") &&
                 !Secrets.gitHubClientId.contains("<INSERT>")
             os_log("GitHub OAuth client configured: %{public}@", type: .debug, hasOAuthClient ? "yes" : "no")
 
-            oauth = OAuthConfiguration(token: Secrets.gitHubClientId, secret: Secrets.gitHubClientSecret, scopes: ["repo"])
-            var components = URLComponents(string: "https://github.com/login/oauth/authorize")!
-            components.queryItems = [
-                URLQueryItem(name: "client_id", value: Secrets.gitHubClientId),
-                URLQueryItem(name: "redirect_uri", value: "hadge://oauth-callback"),
-                URLQueryItem(name: "scope", value: "repo"),
-                URLQueryItem(name: "allow_signup", value: "false")
-            ]
-            configURL = components.url
+            if hasOAuthClient {
+                oauth = OAuthConfiguration(token: Secrets.gitHubClientId, secret: Secrets.gitHubClientSecret, scopes: ["repo"])
+                var components = URLComponents(string: "https://github.com/login/oauth/authorize")!
+                components.queryItems = [
+                    URLQueryItem(name: "client_id", value: Secrets.gitHubClientId),
+                    URLQueryItem(name: "redirect_uri", value: "hadge://oauth-callback"),
+                    URLQueryItem(name: "scope", value: "repo"),
+                    URLQueryItem(name: "allow_signup", value: "false")
+                ]
+                configURL = components.url
+            } else {
+                oauth = nil
+                configURL = nil
+            }
         } else {
             config = TokenConfiguration(self.keychain!["token"])
         }

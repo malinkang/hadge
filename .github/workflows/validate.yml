@@ -60,10 +60,10 @@ jobs:
           OCTO_CLIENT_ID: ${{ secrets.OCTO_CLIENT_ID }}
           OCTO_CLIENT_SECRET: ${{ secrets.OCTO_CLIENT_SECRET }}
         run: |
-          test -n "$OCTO_CLIENT_ID"
-          test -n "$OCTO_CLIENT_SECRET"
-          grep -Fq "$OCTO_CLIENT_ID" Hadge/Generated/Secrets.generated.swift
-          grep -Fq "$OCTO_CLIENT_SECRET" Hadge/Generated/Secrets.generated.swift
+          test "${#OCTO_CLIENT_ID}" -eq 20
+          test "${#OCTO_CLIENT_SECRET}" -eq 40
+          grep -Fxq "  static let gitHubClientId = \"${OCTO_CLIENT_ID}\"" Hadge/Generated/Secrets.generated.swift
+          grep -Fxq "  static let gitHubClientSecret = \"${OCTO_CLIENT_SECRET}\"" Hadge/Generated/Secrets.generated.swift
           ! grep -Fq "local-build-placeholder" Hadge/Generated/Secrets.generated.swift
 
       - name: Build unsigned device app
@@ -87,12 +87,12 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/HadgePayload/Payload"
           cp -R "$RUNNER_TEMP/HadgeDeviceBuild/Build/Products/Release-iphoneos/Hadge.app" "$RUNNER_TEMP/HadgePayload/Payload/"
-          ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/HadgePayload/Payload" "Hadge-1.1-58-unsigned.ipa"
+          ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/HadgePayload/Payload" "Hadge-1.1-59-unsigned.ipa"
 
       - name: Upload unsigned IPA
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: Hadge-1.1-58-unsigned
-          path: Hadge-1.1-58-unsigned.ipa
+          name: Hadge-1.1-59-unsigned
+          path: Hadge-1.1-59-unsigned.ipa
           if-no-files-found: error
