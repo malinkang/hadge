@@ -10,7 +10,7 @@ class LoginViewController: EntireViewController {
         super.viewDidLoad()
 
         signInButton.layer.cornerRadius = 4
-        tokenButton.isHidden = !Constants.debug
+        tokenButton.isHidden = false
 
         for subView in self.view.subviews where subView is UITextView {
             guard let textView = subView as? UITextView else { continue }
@@ -36,7 +36,11 @@ class LoginViewController: EntireViewController {
     }
 
     @IBAction func enterToken(_ sender: Any) {
-        let alertController = UIAlertController(title: "Use a Personal Access Token", message: "This option is only available for debugging purposes and will be removed from the release build.", preferredStyle: .alert)
+        let alertController = UIAlertController(
+            title: "Use a Personal Access Token",
+            message: "Paste a GitHub token with read and write access to your health repository. Hadge stores it only in the iOS Keychain.",
+            preferredStyle: .alert
+        )
         let saveAction = UIAlertAction(title: "Save", style: .default, handler: { _ in
             let textField = alertController.textFields![0] as UITextField
             GitHub.shared().storeToken(token: textField.text!)

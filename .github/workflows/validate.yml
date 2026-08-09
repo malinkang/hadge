@@ -44,3 +44,34 @@ jobs:
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Build unsigned device app
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          xcodebuild \
+            -project Hadge.xcodeproj \
+            -scheme Hadge \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            -derivedDataPath "$RUNNER_TEMP/HadgeDeviceBuild" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Package unsigned IPA
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/HadgePayload/Payload"
+          cp -R "$RUNNER_TEMP/HadgeDeviceBuild/Build/Products/Release-iphoneos/Hadge.app" "$RUNNER_TEMP/HadgePayload/Payload/"
+          ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/HadgePayload/Payload" "Hadge-1.1-57-unsigned.ipa"
+
+      - name: Upload unsigned IPA
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hadge-1.1-57-unsigned
+          path: Hadge-1.1-57-unsigned.ipa
+          if-no-files-found: error
