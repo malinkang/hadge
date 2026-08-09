@@ -25,6 +25,9 @@ jobs:
       - name: Select Xcode
         uses: ./.github/actions/set-xcode-version
 
+      - name: Install Sourcery
+        run: brew install sourcery
+
       - name: Create local build configuration
         shell: bash
         run: |
