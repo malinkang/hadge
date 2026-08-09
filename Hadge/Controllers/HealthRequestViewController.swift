@@ -17,17 +17,26 @@ class HealthRequestViewController: EntireViewController {
 
     @IBAction func requestHealthAccess(_ sender: Any) {
         let objectTypes = Health.shared().readObjectTypes()
+        guard let healthStore = Health.shared().healthStore else { return }
 
-        Health.shared().healthStore?.getRequestStatusForAuthorization(toShare: [], read: objectTypes) { (status, _) in
-            if status == .shouldRequest {
-                Health.shared().healthStore?.requestAuthorization(toShare: [], read: objectTypes) { (_, _) in
-                    NotificationCenter.default.post(name: .didReceiveHealthAccess, object: nil)
+        healthStore.getRequestStatusForAuthorization(toShare: [], read: objectTypes) { status, _ in
+            switch status {
+            case .unnecessary:
+                self.finishHealthAuthorization()
+            case .shouldRequest, .unknown:
+                healthStore.requestAuthorization(toShare: [], read: objectTypes) { success, _ in
+                    guard success else { return }
+                    self.finishHealthAuthorization()
                 }
-            } else {
-                DispatchQueue.main.async {
-                    UIApplication.shared.open(URL(string: "x-apple-health://")!)
-                }
+            @unknown default:
+                return
             }
+        }
+    }
+
+    private func finishHealthAuthorization() {
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .didReceiveHealthAccess, object: nil)
         }
     }
 }
