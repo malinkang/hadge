@@ -16,23 +16,7 @@ class HealthRequestViewController: EntireViewController {
     }
 
     @IBAction func requestHealthAccess(_ sender: Any) {
-        let objectTypes: Set<HKObjectType> = [
-            HKObjectType.activitySummaryType(),
-            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKObjectType.quantityType(forIdentifier: .basalEnergyBurned)!,
-            HKObjectType.quantityType(forIdentifier: .distanceCycling)!,
-            HKObjectType.quantityType(forIdentifier: .distanceDownhillSnowSports)!,
-            HKObjectType.quantityType(forIdentifier: .distanceSwimming)!,
-            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!,
-            HKObjectType.quantityType(forIdentifier: .distanceWheelchair)!,
-            HKObjectType.quantityType(forIdentifier: .flightsClimbed)!,
-            HKObjectType.quantityType(forIdentifier: .heartRate)!,
-            HKObjectType.quantityType(forIdentifier: .stepCount)!,
-            HKObjectType.quantityType(forIdentifier: .swimmingStrokeCount)!,
-            HKObjectType.workoutType(),
-            HKSeriesType.workoutRoute(),
-            HKQuantityType.characteristicType(forIdentifier: HKCharacteristicTypeIdentifier.biologicalSex)!
-        ]
+        let objectTypes = Health.shared().readObjectTypes()
 
         Health.shared().healthStore?.getRequestStatusForAuthorization(toShare: [], read: objectTypes) { (status, _) in
             if status == .shouldRequest {

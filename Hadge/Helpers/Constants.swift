@@ -11,6 +11,7 @@ class UserDefaultKeys {
     static let lastSyncDate = "lastSyncDate"
     static let setupFinished = "setupFinished"
     static let workoutFilter = "workoutFilter"
+    static let healthExportAuthorizationVersion = "healthExportAuthorizationVersion"
 }
 
 enum InterfaceStyle: Int {
@@ -24,5 +25,6 @@ extension Notification.Name {
     static let isCollectingWorkouts = Notification.Name("isCollectingWorkouts")
     static let collectingActivityData = Notification.Name("isCollectingActivityData")
     static let collectingDistanceData = Notification.Name("isCollectingDistanceData")
+    static let collectingHealthData = Notification.Name("isCollectingHealthData")
     static let didFinishExport = Notification.Name("didFinishExport")
 }

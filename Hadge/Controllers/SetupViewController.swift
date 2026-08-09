@@ -28,7 +28,7 @@ class SetupViewController: EntireViewController {
 
         GitHub.shared().getRepository { _ in
             GitHub.shared().updateFile(path: "README.md", content: self.loadReadMeTemplate(), message: "Update README") { _ in
-                (self.collectWorkoutData || self.collectActivityData || self.collectDistanceData || self.finishExport) { }
+                (self.collectWorkoutData || self.collectActivityData || self.collectDistanceData || self.collectAdditionalHealthData || self.finishExport) { }
             }
         }
     }
@@ -73,6 +73,35 @@ class SetupViewController: EntireViewController {
         }
     }
 
+    func collectAdditionalHealthData(completionHandler: @escaping () -> Void) {
+        collectHealthModule(at: 0, modules: Health.enabledExportModules(), completionHandler: completionHandler)
+    }
+
+    func collectHealthModule(
+        at index: Int,
+        modules: [HealthExportModule],
+        completionHandler: @escaping () -> Void
+    ) {
+        guard index < modules.count, !stopped else { completionHandler(); return }
+        let module = modules[index]
+        let start = Calendar.current.date(from: DateComponents(year: 2014, month: 1, day: 1))
+        Health.shared().getHealthRecords(for: module, start: start, end: Date()) { records in
+            self.initalizeYears()
+            records.forEach { record in
+                self.addDataToYears(self.yearFromDate(record.date), data: record)
+            }
+            guard !self.years.isEmpty else {
+                self.collectHealthModule(at: index + 1, modules: modules, completionHandler: completionHandler)
+                return
+            }
+            Health.shared().exportData(self.years, directory: module.rawValue, contentHandler: { values in
+                return Health.shared().generateContentForHealthRecords(module: module, records: values)
+            }, completionHandler: {
+                self.collectHealthModule(at: index + 1, modules: modules, completionHandler: completionHandler)
+            })
+        }
+    }
+
     func initalizeYears() {
         self.years = [:]
     }
@@ -84,6 +113,8 @@ class SetupViewController: EntireViewController {
 
     func finishExport(completionHandler: @escaping () -> Void) {
         UserDefaults.standard.set(true, forKey: UserDefaultKeys.setupFinished)
+        UserDefaults.standard.set(Health.exportAuthorizationVersion, forKey: UserDefaultKeys.healthExportAuthorizationVersion)
+        UserDefaults.standard.set(Date(), forKey: UserDefaultKeys.lastSyncDate)
         NotificationCenter.default.post(name: .didSetUpRepository, object: nil)
         BackgroundTaskHelper.shared().registerBackgroundDelivery()
         UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier!)

@@ -41,7 +41,11 @@ class WorkoutsViewController: EntireTableViewController {
         super.viewDidAppear(animated)
 
         if UserDefaults.standard.bool(forKey: UserDefaultKeys.setupFinished) && !dataLoaded {
-            loadData(false)
+            Health.shared().requestEnabledExportAuthorizationIfNeeded { _ in
+                DispatchQueue.main.async {
+                    self.loadData(false)
+                }
+            }
         }
     }
 
@@ -127,6 +131,11 @@ class WorkoutsViewController: EntireTableViewController {
 
     @objc func collectingDistanceData() {
         updateStatusLabel("Refreshing distance data...")
+    }
+
+    @objc func collectingHealthData(_ notification: Notification) {
+        let title = notification.object as? String ?? "health data"
+        updateStatusLabel("Refreshing \(title.lowercased())...")
     }
 
     @objc func didFinishExport() {
@@ -267,6 +276,7 @@ class WorkoutsViewController: EntireTableViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(WorkoutsViewController.didChangeInterfaceStyle), name: .didChangeInterfaceStyle, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(WorkoutsViewController.collectingActivityData), name: .collectingActivityData, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(WorkoutsViewController.collectingDistanceData), name: .collectingDistanceData, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(WorkoutsViewController.collectingHealthData(_:)), name: .collectingHealthData, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(WorkoutsViewController.didFinishExport), name: .didFinishExport, object: nil)
     }
 

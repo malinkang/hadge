@@ -3,9 +3,9 @@
 [![Build App](https://github.com/ashtom/hadge/actions/workflows/build_app.yml/badge.svg)](https://github.com/ashtom/hadge/actions/workflows/build_app.yml)
 [![TestFlight](https://shields.io/static/v1?label=TestFlight&message=Join%20Beta&color=blue)](https://testflight.apple.com/join/rFLkfNSu)
 
-This app serves one simple purpose: Exporting workout data from the Health.app on iOS to a git repo on GitHub. 
+This app exports selected Health.app data from iOS to a git repo on GitHub. In addition to workouts, distances, and Activity rings, it can export body measurements, vital signs, sleep, blood pressure, nutrition and water, mobility, and mindfulness records.
 
-At the first launch of the app, you can connect your GitHub account, then the app checks whether a repo with the name `health` exists and, if not, it automatically creates it as a private repo. The initial export dumps all workouts, distances, and daily activity data (the rings on Apple Watch) to .csv files, one per year. The app also registers a background task that gets activated whenever you finish a new workout and then updates the .csv files. 
+At the first launch of the app, you can connect your GitHub account, then the app checks whether a repo with the name `health` exists and, if not, it automatically creates it as a private repo. The initial export writes workouts, distances, daily Activity rings, and every enabled health module to yearly CSV files. The app also registers background tasks and refreshes current-year files when new data becomes available.
 
 ## TestFlight Beta
 

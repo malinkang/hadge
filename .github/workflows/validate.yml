@@ -1,0 +1,43 @@
+name: Validate
+
+on:
+  push:
+    branches:
+      - "codex/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hadge-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: ./.github/actions/set-xcode-version
+
+      - name: Create local build configuration
+        shell: bash
+        run: |
+          cp Hadge/Secrets.template.xcconfig Hadge/Secrets.xcconfig
+
+      - name: Build without code signing
+        shell: bash
+        run: |
+          xcodebuild \
+            -project Hadge.xcodeproj \
+            -scheme Hadge \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build

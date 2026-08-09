@@ -109,7 +109,7 @@ class BackgroundTaskHelper {
         self.task = task
         self.stopped = false
         if isSignedIn() && UIApplication.shared.isProtectedDataAvailable {
-            (self.collectWorkoutData || self.collectActivityData || self.collectDistanceData || self.finishExport || self.finishBackgroundTask) { }
+            (self.collectWorkoutData || self.collectActivityData || self.collectDistanceData || self.collectAdditionalHealthData || self.finishExport || self.finishBackgroundTask) { }
         } else {
             self.finishBackgroundTask { }
         }
@@ -118,7 +118,7 @@ class BackgroundTaskHelper {
     func handleForegroundFetch() {
         self.stopped = false
         if isSignedIn() {
-            (self.collectWorkoutData || self.collectActivityData || self.collectDistanceData || self.finishExport) { }
+            (self.collectWorkoutData || self.collectActivityData || self.collectDistanceData || self.collectAdditionalHealthData || self.finishExport) { }
         }
     }
 
@@ -170,8 +170,38 @@ class BackgroundTaskHelper {
         }
     }
 
+    func collectAdditionalHealthData(completionHandler: @escaping () -> Void) {
+        collectHealthModule(at: 0, modules: Health.enabledExportModules(), completionHandler: completionHandler)
+    }
+
+    func collectHealthModule(
+        at index: Int,
+        modules: [HealthExportModule],
+        completionHandler: @escaping () -> Void
+    ) {
+        guard index < modules.count, !stopped else { completionHandler(); return }
+        let module = modules[index]
+        NotificationCenter.default.post(name: .collectingHealthData, object: module.title)
+        Health.shared().getHealthRecords(
+            for: module,
+            start: Health.shared().firstOfYear,
+            end: Date()
+        ) { records in
+            guard !records.isEmpty else {
+                self.collectHealthModule(at: index + 1, modules: modules, completionHandler: completionHandler)
+                return
+            }
+            let content = Health.shared().generateContentForHealthRecords(module: module, records: records)
+            let filename = "\(module.rawValue)/\(Health.shared().year).csv"
+            GitHub.shared().updateFile(path: filename, content: content, message: "Update \(module.title.lowercased())") { _ in
+                self.collectHealthModule(at: index + 1, modules: modules, completionHandler: completionHandler)
+            }
+        }
+    }
+
     func finishExport(completionHandler: @escaping () -> Void) {
         self.updateActivityData = false
+        UserDefaults.standard.set(Date(), forKey: UserDefaultKeys.lastSyncDate)
         NotificationCenter.default.post(name: .didFinishExport, object: nil)
 
         if backgroundTaskIdentifier != nil {

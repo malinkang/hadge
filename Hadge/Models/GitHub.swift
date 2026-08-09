@@ -169,35 +169,45 @@ class GitHub {
         }
     }
 
-    func getFile(path: String, completionHandler: @escaping (String) -> Void) {
+    func getFile(path: String, completionHandler: @escaping (String?, Bool) -> Void) {
         let escapedPath = path.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed)!
         let url = URL(string: "https://api.github.com/repos/\(username()!)/\(GitHub.defaultRepository)/contents/\(escapedPath)")!
         let request = self.createRequest(url: url, httpMethod: "GET")
 
-        self.handleRequest(request, completionHandler: { json, _, _ in
-            let sha = json?["sha"].stringValue
-            os_log("File sha: %@", type: .debug, sha!)
-
-            if sha != nil {
-                completionHandler(sha!)
+        self.handleRequest(request, completionHandler: { json, status, error in
+            if status == 200, let sha = json?["sha"].string, !sha.isEmpty {
+                os_log("File sha: %@", type: .debug, sha)
+                completionHandler(sha, true)
+            } else if status == 404 {
+                completionHandler(nil, true)
+            } else {
+                if let message = error?.localizedDescription {
+                    os_log("Unable to inspect file before upload: %@", type: .error, message)
+                } else {
+                    os_log("Unable to inspect file before upload: HTTP %d", type: .error, status)
+                }
+                completionHandler(nil, false)
             }
         })
     }
 
     func updateFile(path: String, content: String, message: String, completionHandler: @escaping (String?) -> Void) {
-        getFile(path: path) { sha in
+        getFile(path: path) { sha, canUpload in
+            guard canUpload else { completionHandler(nil); return }
             let escapedPath = path.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryAllowed)!
             let url = URL(string: "https://api.github.com/repos/\(self.username()!)/\(GitHub.defaultRepository)/contents/\(escapedPath)")!
             var request = self.createRequest(url: url, httpMethod: "PUT")
-            let parameters: [String: Any] = [
+            var parameters: [String: Any] = [
                 "message": message,
-                "sha": sha,
                 "content": content.data(using: String.Encoding.utf8)!.base64EncodedString(),
                 "author": [
                     "name": "Hadge",
                     "email": "hadge@entire.io"
                 ]
             ]
+            if let sha = sha, !sha.isEmpty {
+                parameters["sha"] = sha
+            }
             do {
                 request.httpBody = try JSON(parameters).rawData()
 

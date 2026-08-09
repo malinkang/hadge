@@ -52,7 +52,7 @@ class SettingsViewController: EntireTableViewController {
         case .appearance:
             return 3
         case .sync:
-            return 1
+            return syncHelper.numberOfRows()
         case .about:
             return 1
         case .debug:
@@ -115,7 +115,7 @@ class SettingsViewController: EntireTableViewController {
         case .appearance:
             return nil
         case .sync:
-            return "This will re-upload all activity, distance, and workout data for all years with available data. You typically don't need to do this unless you deleted the repository or files in it."
+            return "Choose which additional HealthKit modules Hadge exports. Turning a module off stops future uploads but never deletes existing GitHub files. Re-upload all data refreshes activity, distance, workout, and enabled health data for every available year."
         case .about:
             let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
             let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
