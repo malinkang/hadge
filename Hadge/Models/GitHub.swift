@@ -34,8 +34,19 @@ class GitHub {
     func prepare() {
         keychain = Keychain(service: "io.entire.hadge.github-token")
         if (keychain!["token"] == nil) || (keychain!["token"]?.isEmpty)! {
+            let hasOAuthClient = !Secrets.gitHubClientId.contains("placeholder") &&
+                !Secrets.gitHubClientId.contains("<INSERT>")
+            os_log("GitHub OAuth client configured: %{public}@", type: .debug, hasOAuthClient ? "yes" : "no")
+
             oauth = OAuthConfiguration(token: Secrets.gitHubClientId, secret: Secrets.gitHubClientSecret, scopes: ["repo"])
-            configURL = oauth!.authenticate()
+            var components = URLComponents(string: "https://github.com/login/oauth/authorize")!
+            components.queryItems = [
+                URLQueryItem(name: "client_id", value: Secrets.gitHubClientId),
+                URLQueryItem(name: "redirect_uri", value: "hadge://oauth-callback"),
+                URLQueryItem(name: "scope", value: "repo"),
+                URLQueryItem(name: "allow_signup", value: "false")
+            ]
+            configURL = components.url
         } else {
             config = TokenConfiguration(self.keychain!["token"])
         }
@@ -54,7 +65,12 @@ class GitHub {
     }
 
     func signIn(_ contextProvider: ASWebAuthenticationPresentationContextProviding?) {
-        let session = ASWebAuthenticationSession(url: configURL!, callbackURLScheme: "hadge") { url, error in
+        guard let configURL = configURL else {
+            NotificationCenter.default.post(name: .signInFailed, object: nil)
+            return
+        }
+
+        let session = ASWebAuthenticationSession(url: configURL, callbackURLScheme: "hadge") { url, error in
             if error != nil {
                 NotificationCenter.default.post(name: .signInFailed, object: nil)
                 return
