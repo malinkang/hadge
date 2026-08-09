@@ -113,7 +113,9 @@ class Health {
         let firstOfNextYear = calendar.date(from: DateComponents(year: year + 1, month: 1, day: 1))
         self.lastOfYear = calendar.date(byAdding: .day, value: -1, to: firstOfNextYear!)
     }
+}
 
+extension Health {
     func readObjectTypes() -> Set<HKObjectType> {
         var objectTypes: Set<HKObjectType> = [
             HKObjectType.activitySummaryType(),
@@ -494,7 +496,9 @@ class Health {
         }
         return value
     }
+}
 
+extension Health {
     func getBiologicalSex() -> HKBiologicalSexObject? {
         var biologicalSex: HKBiologicalSexObject?
         do {
