@@ -30,8 +30,16 @@ jobs:
 
       - name: Create local build configuration
         shell: bash
+        env:
+          OCTO_CLIENT_ID: ${{ secrets.OCTO_CLIENT_ID }}
+          OCTO_CLIENT_SECRET: ${{ secrets.OCTO_CLIENT_SECRET }}
         run: |
-          cp Hadge/Secrets.template.xcconfig Hadge/Secrets.xcconfig
+          if [[ "${{ github.event_name }}" != "pull_request" && -n "$OCTO_CLIENT_ID" && -n "$OCTO_CLIENT_SECRET" ]]; then
+            printf 'GITHUB_CLIENT_ID = "%s"\n' "$OCTO_CLIENT_ID" > Hadge/Secrets.xcconfig
+            printf 'GITHUB_CLIENT_SECRET = "%s"\n' "$OCTO_CLIENT_SECRET" >> Hadge/Secrets.xcconfig
+          else
+            cp Hadge/Secrets.template.xcconfig Hadge/Secrets.xcconfig
+          fi
 
       - name: Build without code signing
         shell: bash
