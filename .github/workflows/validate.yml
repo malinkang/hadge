@@ -25,8 +25,8 @@ jobs:
       - name: Select Xcode
         uses: ./.github/actions/set-xcode-version
 
-      - name: Install Sourcery
-        run: brew install sourcery
+      - name: Install build tools
+        run: brew install sourcery swiftlint
 
       - name: Create local build configuration
         shell: bash
