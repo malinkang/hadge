@@ -155,9 +155,6 @@ extension Health {
                 objectTypes.insert(type)
             }
         case .bloodPressure:
-            if let type = HKObjectType.correlationType(forIdentifier: .bloodPressure) {
-                objectTypes.insert(type)
-            }
             if let systolic = HKObjectType.quantityType(forIdentifier: .bloodPressureSystolic) {
                 objectTypes.insert(systolic)
             }
