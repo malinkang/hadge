@@ -39,7 +39,7 @@ final class AppTabBarController: UITabBarController {
             }
             configureTabs(workoutsNavigationController: workouts)
         }
-        selectedIndex = UserDefaults.standard.bool(forKey: UserDefaultKeys.setupFinished) ? 0 : 1
+        selectedIndex = 0
         if let argument = ProcessInfo.processInfo.arguments.first(where: {
             $0.hasPrefix("--tab=")
         }), let index = Int(argument.dropFirst("--tab=".count)), (0..<4).contains(index) {

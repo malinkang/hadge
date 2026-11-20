@@ -58,6 +58,11 @@ class WorkoutViewController: EntireTableViewController {
     }
 
     @objc func export(sender: Any) {
+        guard GitHub.shared().isSignedIn(),
+              UserDefaults.standard.bool(forKey: UserDefaultKeys.setupFinished) else {
+            updateStatus(string: "请先在“设置”中登录并连接 GitHub。")
+            return
+        }
         if !exportSemaphore {
             exportSemaphore = true
             updateStatus(string: "Processing workout details...")
@@ -284,7 +289,6 @@ class WorkoutViewController: EntireTableViewController {
         statusItem.customView?.setContentHuggingPriority(.defaultLow, for: .horizontal)
         statusItem.customView?.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         exportButton = UIBarButtonItem(image: UIImage(systemName: "plus.app"), style: .plain, target: self, action: #selector(export(sender:)))
-        exportButton?.tintColor = UIColor.secondaryLabel
 
         let leftSpaceItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
         let rightSpaceItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
@@ -293,7 +297,9 @@ class WorkoutViewController: EntireTableViewController {
 
         updateButtonState()
 
-        if let exported = self.state["exported"] as? Bool, exported == true {
+        if !GitHub.shared().isSignedIn() {
+            updateStatus(string: "登录 GitHub 后，可以从这里导出单次运动详情。")
+        } else if let exported = self.state["exported"] as? Bool, exported == true {
         } else {
             updateStatus(string: "Tap the ﹢ button to export this workout's samples to your repo.")
         }
@@ -316,6 +322,14 @@ class WorkoutViewController: EntireTableViewController {
 
     func updateButtonState() {
         DispatchQueue.main.async {
+            let canExport = GitHub.shared().isSignedIn()
+                && UserDefaults.standard.bool(forKey: UserDefaultKeys.setupFinished)
+            self.exportButton?.isEnabled = canExport
+            self.exportButton?.tintColor = canExport ? .systemBlue : .tertiaryLabel
+            guard canExport else {
+                self.exportButton?.image = UIImage(systemName: "plus.app")
+                return
+            }
             if let exported = self.state["exported"] as? Bool, exported == true {
                 self.exportButton.image = UIImage(systemName: "plus.app.fill")
             } else {

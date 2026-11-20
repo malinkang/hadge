@@ -57,9 +57,9 @@ class WorkoutsViewController: EntireTableViewController {
         navigationController?.setNavigationBarHidden(true, animated: animated)
         navigationController?.setToolbarHidden(true, animated: false)
 
-        if !GitHub.shared().isSignedIn() || !UserDefaults.standard.bool(forKey: UserDefaultKeys.setupFinished) {
-            self.navigationController?.performSegue(withIdentifier: "SetupSegue", sender: nil)
-        } else if !dataLoaded {
+        if GitHub.shared().isSignedIn()
+            && UserDefaults.standard.bool(forKey: UserDefaultKeys.setupFinished)
+            && !dataLoaded {
             GitHub.shared().refreshCurrentUser()
         }
     }
@@ -72,7 +72,7 @@ class WorkoutsViewController: EntireTableViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        if UserDefaults.standard.bool(forKey: UserDefaultKeys.setupFinished) && !dataLoaded {
+        if !dataLoaded {
             Health.shared().requestEnabledExportAuthorizationIfNeeded { _ in
                 DispatchQueue.main.async {
                     self.loadData(false)
@@ -196,10 +196,8 @@ class WorkoutsViewController: EntireTableViewController {
 
     @objc func didSignOut() {
         DispatchQueue.main.async {
-            self.data = []
+            self.refreshJournalHeader()
             self.tableView.reloadData()
-
-            self.navigationController?.performSegue(withIdentifier: "SetupSegue", sender: nil)
         }
     }
 
@@ -299,7 +297,9 @@ class WorkoutsViewController: EntireTableViewController {
         let workouts = data.compactMap { $0["workout"] as? HKWorkout }
         let lastSyncDate = UserDefaults.standard.object(forKey: UserDefaultKeys.lastSyncDate) as? Date
         let syncText: String
-        if let lastSyncDate {
+        if !GitHub.shared().isSignedIn() {
+            syncText = "GitHub 未连接"
+        } else if let lastSyncDate {
             let formatter = RelativeDateTimeFormatter()
             formatter.locale = Locale(identifier: "zh_CN")
             formatter.unitsStyle = .short

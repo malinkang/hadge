@@ -1,6 +1,8 @@
 import UIKit
 
 class SetupPageViewController: EntirePageViewController, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
+    var startsAtGitHub = false
+
     lazy var orderedViewControllers = [
         self.viewControllerForIdentifier("HealthRequestViewController"),
         self.viewControllerForIdentifier("LoginViewController")
@@ -9,7 +11,7 @@ class SetupPageViewController: EntirePageViewController, UIPageViewControllerDat
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        self.isModalInPresentation = true
+        self.isModalInPresentation = !startsAtGitHub
         self.dataSource = self
         self.delegate = self
 
@@ -18,8 +20,18 @@ class SetupPageViewController: EntirePageViewController, UIPageViewControllerDat
         appearance.currentPageIndicatorTintColor = UIColor.label
         self.view.backgroundColor = UIColor.systemBackground
 
-        if let firstViewController = orderedViewControllers.first {
-            setViewControllers([firstViewController], direction: .forward, animated: true, completion: nil)
+        let firstViewController = startsAtGitHub
+            ? orderedViewControllers[1]
+            : orderedViewControllers[0]
+        setViewControllers([firstViewController], direction: .forward, animated: true, completion: nil)
+
+        if startsAtGitHub {
+            installDismissButton()
+            DispatchQueue.main.async {
+                self.view.subviews.compactMap { $0 as? UIPageControl }.forEach {
+                    $0.isHidden = true
+                }
+            }
         }
 
         addObservers()
@@ -104,5 +116,24 @@ class SetupPageViewController: EntirePageViewController, UIPageViewControllerDat
             self.removeObservers()
             self.dismiss(animated: true, completion: nil)
         }
+    }
+
+    @objc private func dismissSetup() {
+        dismiss(animated: true)
+    }
+
+    private func installDismissButton() {
+        let button = UIButton(type: .system)
+        button.setTitle("稍后设置", for: .normal)
+        button.setTitleColor(.secondaryLabel, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .semibold)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(dismissSetup), for: .touchUpInside)
+        view.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
+            button.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            button.heightAnchor.constraint(equalToConstant: 36)
+        ])
     }
 }

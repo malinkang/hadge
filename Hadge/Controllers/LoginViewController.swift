@@ -11,6 +11,10 @@ class LoginViewController: EntireViewController {
 
         signInButton.layer.cornerRadius = 4
         tokenButton.isHidden = false
+        if GitHub.shared().isSignedIn() {
+            signInButton.setTitle("继续连接健康仓库", for: .normal)
+            tokenButton.isHidden = true
+        }
 
         for subView in self.view.subviews where subView is UITextView {
             guard let textView = subView as? UITextView else { continue }
