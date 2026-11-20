@@ -37,3 +37,6 @@ Generated
 Secrets.xcconfig
 DeveloperSettings.xcconfig
 Brewfile.lock.json
+
+## Local verification screenshots
+artifacts/

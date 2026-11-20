@@ -38,9 +38,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Hadge needs read-only access to the health categories you enable so it can export activity, workouts, sleep, body measurements, vital signs, nutrition, and mobility data to your GitHub account.</string>
+	<string>Hadge needs read-only access to the health categories you enable so it can export them to the destinations you choose, including GitHub, Notion, JSON, and CSV.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Hadge uses read-only Health access and never writes Health data. Enabled data is sent only to the health repository in your GitHub account.</string>
+	<string>Hadge uses read-only Health access and never writes Health data. Data is sent only to destinations you explicitly choose.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

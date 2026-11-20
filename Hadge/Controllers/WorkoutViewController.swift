@@ -1,9 +1,11 @@
 import UIKit
 import HealthKit
+import CoreLocation
 import os.log
 
 private enum WorkoutSectionType: Int {
     case basic = 0
+    case route
     case distance
     case heartRate
     case source
@@ -22,6 +24,10 @@ class WorkoutViewController: EntireTableViewController {
 
     fileprivate var sections: [WorkoutSectionType] = []
     fileprivate var data: [WorkoutSectionType: [[String?]]] = [:]
+    private var routeLocations: [CLLocation] = []
+    private lazy var routeMapCell = WorkoutRouteMapCell()
+    private var didFocusRequestedRouteMap = false
+    private var routeMapReady = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -44,12 +50,24 @@ class WorkoutViewController: EntireTableViewController {
         return data[sectionType]?.count ?? 0
     }
 
+    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return sections[indexPath.section] == .route && routeMapReady
+            ? 276
+            : UITableView.automaticDimension
+    }
+
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let identifier = "DetailCell"
-        let cell = tableView.dequeueReusableCell(withIdentifier: identifier) ?? UITableViewCell.init(style: .value1, reuseIdentifier: identifier)
-        cell.selectionStyle = .none
 
         let sectionType = sections[indexPath.section]
+        if sectionType == .route && routeMapReady {
+            return routeMapCell
+        }
+
+        let cell = tableView.dequeueReusableCell(withIdentifier: identifier) ?? UITableViewCell.init(style: .value1, reuseIdentifier: identifier)
+        cell.selectionStyle = .none
+        cell.detailTextLabel?.numberOfLines = sectionType == .route ? 0 : 1
+
         let row = data[sectionType]?[indexPath.row]
         cell.textLabel?.text = row?[0]
         cell.detailTextLabel?.text = row?[1]
@@ -179,6 +197,7 @@ class WorkoutViewController: EntireTableViewController {
 
     func buildSections() {
         buildBasicSection()
+        buildRouteSection()
         if let distance = workout!.totalDistance?.doubleValue(for: HKUnit.meter()), distance > 0 {
             buildDistanceSection(distance)
         }
@@ -194,6 +213,11 @@ class WorkoutViewController: EntireTableViewController {
         data[.basic]?.append(["End", timeFormatter?.string(from: workout!.endDate)])
         data[.basic]?.append(["Duration", durationFormatter?.string(from: workout!.duration)])
         data[.basic]?.append(["Energy burned", String(format: "%.0fcal", workout!.totalEnergyBurned?.doubleValue(for: HKUnit.kilocalorie()) ?? 0)])
+    }
+
+    func buildRouteSection() {
+        sections.append(.route)
+        data[.route] = [["路线地图", "正在读取 GPS 轨迹…"]]
     }
 
     func buildDistanceSection(_ distance: Double) {
@@ -251,8 +275,70 @@ class WorkoutViewController: EntireTableViewController {
             }
         }
 
+        loadRouteMap()
+
         // Split calculation (not finished yet)
         // Health.shared().splitsDataSource?.calculateSplits(workout: workout!)
+    }
+
+    private func loadRouteMap() {
+        guard let workout = workout else { return }
+
+        let routeTypes: Set<HKObjectType> = [HKSeriesType.workoutRoute()]
+        Health.shared().healthStore?.requestAuthorization(toShare: [], read: routeTypes) { [weak self] _, _ in
+            guard let self = self else { return }
+            self.queryRouteMap(for: workout)
+        }
+    }
+
+    private func queryRouteMap(for workout: HKWorkout) {
+        Health.shared().locationDataSource?.getAllForWorkout(workout) { [weak self] locations in
+            let validLocations = (locations ?? []).filter {
+                CLLocationCoordinate2DIsValid($0.coordinate)
+                    && $0.coordinate.latitude.isFinite
+                    && $0.coordinate.longitude.isFinite
+            }
+
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                guard validLocations.count > 1 else {
+                    self.data[.route] = [[
+                        "路线地图",
+                        "没有读取到 GPS 轨迹。请打开“健康”App → 浏览 → 个人资料 → 隐私 → App → Hadge，允许读取“体能训练路线”。"
+                    ]]
+                    self.tableView.reloadData()
+                    return
+                }
+
+                self.routeLocations = validLocations
+                self.routeMapReady = true
+                self.routeMapCell.configure(
+                    locations: validLocations,
+                    activityType: workout.workoutActivityType
+                )
+
+                self.data[.route] = [[nil, nil]]
+                self.tableView.reloadData()
+                self.focusRequestedRouteMapIfNeeded()
+            }
+        }
+    }
+
+    private func focusRequestedRouteMapIfNeeded() {
+        guard !didFocusRequestedRouteMap,
+              ProcessInfo.processInfo.environment["HADGE_FOCUS_ROUTE_MAP"] == "1",
+              let section = sections.firstIndex(of: .route) else {
+            return
+        }
+
+        didFocusRequestedRouteMap = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.tableView.scrollToRow(
+                at: IndexPath(row: 0, section: section),
+                at: .middle,
+                animated: false
+            )
+        }
     }
 
     func heartRateToString(_ heartRate: HKQuantity?) -> String {

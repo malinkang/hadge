@@ -8,19 +8,25 @@ class LocationDataSource {
     func getAllForWorkout(_ workout: HKWorkout, completionHandler: @escaping ([CLLocation]?) -> Void) {
         let predicate = HKQuery.predicateForObjects(from: workout)
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
-        let routeQuery = HKSampleQuery(sampleType: HKSeriesType.workoutRoute(), predicate: predicate, limit: 0, sortDescriptors: [sortDescriptor]) { (_, results, _) in
+        let routeQuery = HKSampleQuery(sampleType: HKSeriesType.workoutRoute(), predicate: predicate, limit: 0, sortDescriptors: [sortDescriptor]) { (_, results, error) in
+            if ProcessInfo.processInfo.environment["HADGE_ROUTE_DEBUG"] == "1" {
+                print("HadgeRoute routeQuery results=\(results?.count ?? 0) error=\(error?.localizedDescription ?? "none")")
+            }
             guard let routes = results as? [HKWorkoutRoute]?, routes != nil, routes!.count > 0 else {
                 completionHandler([])
                 return
             }
 
             var allLocations: [CLLocation] = []
-            let locationQuery = HKWorkoutRouteQuery(route: routes!.first!) { (_, locations, done, _) in
+            let locationQuery = HKWorkoutRouteQuery(route: routes!.first!) { (_, locations, done, error) in
                 if locations != nil {
                     allLocations += locations!
                 }
 
                 if done {
+                    if ProcessInfo.processInfo.environment["HADGE_ROUTE_DEBUG"] == "1" {
+                        print("HadgeRoute locationQuery count=\(allLocations.count) error=\(error?.localizedDescription ?? "none")")
+                    }
                     completionHandler(allLocations)
                 }
             }

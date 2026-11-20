@@ -137,11 +137,11 @@ class SettingsViewController: EntireTableViewController {
         case .sync:
             return "选择需要导出到 GitHub 的 HealthKit 数据。关闭模块只会停止后续上传，不会删除已有文件。重新上传会刷新所有可用年份的活动、距离、运动和健康数据。"
         case .export:
-            return "GitHub 登录后可用。Notion、Obsidian、JSON 和 CSV 入口已预留，功能将在后续版本提供。"
+            return "GitHub 会上传到你的私有健康仓库；Notion 使用“同步 ID”增量更新模板；JSON 和 CSV 导出保存在本机并通过系统分享。Obsidian 入口将在后续版本提供。"
         case .about:
             let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
             let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
-            return "Hadge \(version!) (\(build!))\n健康数据只会上传到你的 GitHub 私有健康仓库。"
+            return "Hadge \(version!) (\(build!))\n健康数据只会上传到你在“数据导出”中选择的目的地。"
         case .debug:
             return "此区域只会在调试构建中显示。"
         }
@@ -217,8 +217,8 @@ private enum SettingsExportDestination: Int, CaseIterable {
 
     var availabilityText: String {
         switch self {
-        case .github: return "已支持"
-        case .notion, .obsidian, .json, .csv: return "即将支持"
+        case .github, .notion, .json, .csv: return "已支持"
+        case .obsidian: return "即将支持"
         }
     }
 }
@@ -252,22 +252,69 @@ final class SettingsExportDestinationsHelper: NSObject {
         guard let destination = SettingsExportDestination(rawValue: row) else {
             return
         }
-        let message: String
-        if destination == .github {
-            if GitHub.shared().isSignedIn() {
-                message = "GitHub 同步已可用，请在“自动同步”中配置要导出的数据。"
-            } else {
-                message = "请先在“账号”中登录 GitHub，再配置自动同步。"
-            }
-        } else {
-            message = "\(destination.title) 导出入口已经预留，具体功能将在后续版本提供。"
+
+        switch destination {
+        case .github:
+            exportToGitHub(from: viewController)
+        case .notion:
+            present(
+                NotionExportViewController(),
+                from: viewController
+            )
+        case .json:
+            present(
+                FileExportViewController(format: .json),
+                from: viewController
+            )
+        case .csv:
+            present(
+                FileExportViewController(format: .csv),
+                from: viewController
+            )
+        case .obsidian:
+            let alert = UIAlertController(
+                title: "Obsidian",
+                message: "Obsidian Vault 导出入口将在后续版本提供。",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "知道了", style: .default))
+            viewController.present(alert, animated: true)
         }
-        let alert = UIAlertController(
-            title: destination.title,
-            message: message,
-            preferredStyle: .alert
+    }
+
+    private func exportToGitHub(from viewController: SettingsViewController) {
+        guard GitHub.shared().isSignedIn() else {
+            let storyboard = UIStoryboard(name: "Main", bundle: Bundle.main)
+            guard let setup = storyboard.instantiateViewController(
+                withIdentifier: "SetupPageViewController"
+            ) as? SetupPageViewController else {
+                return
+            }
+            setup.startsAtGitHub = true
+            setup.modalPresentationStyle = .fullScreen
+            viewController.present(setup, animated: true)
+            return
+        }
+
+        NotificationCenter.default.addObserver(
+            viewController,
+            selector: #selector(SettingsViewController.didFinishUpload),
+            name: .didSetUpRepository,
+            object: nil
         )
-        alert.addAction(UIAlertAction(title: "知道了", style: .default))
-        viewController.present(alert, animated: true)
+        viewController.performSegue(
+            withIdentifier: "UploadSegue",
+            sender: self
+        )
+    }
+
+    private func present(
+        _ destination: UIViewController,
+        from viewController: SettingsViewController
+    ) {
+        let navigation = UINavigationController(rootViewController: destination)
+        navigation.navigationBar.prefersLargeTitles = false
+        navigation.modalPresentationStyle = .pageSheet
+        viewController.present(navigation, animated: true)
     }
 }

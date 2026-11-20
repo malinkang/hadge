@@ -3,9 +3,29 @@
 [![Build App](https://github.com/ashtom/hadge/actions/workflows/build_app.yml/badge.svg)](https://github.com/ashtom/hadge/actions/workflows/build_app.yml)
 [![TestFlight](https://shields.io/static/v1?label=TestFlight&message=Join%20Beta&color=blue)](https://testflight.apple.com/join/rFLkfNSu)
 
-This app exports selected Health.app data from iOS to a git repo on GitHub. In addition to workouts, distances, and Activity rings, it can export body measurements, vital signs, sleep, blood pressure, nutrition and water, mobility, and mindfulness records.
+This app exports selected Health.app data from iOS to GitHub, Notion, JSON, or
+CSV. In addition to workouts, distances, and Activity rings, it can export body
+measurements, vital signs, sleep, blood pressure, nutrition and water, mobility,
+and mindfulness records.
 
 At the first launch of the app, you can connect your GitHub account, then the app checks whether a repo with the name `health` exists and, if not, it automatically creates it as a private repo. The initial export writes workouts, distances, daily Activity rings, and every enabled health module to yearly CSV files. The app also registers background tasks and refreshes current-year files when new data becomes available.
+
+## Export destinations
+
+Open `Settings → Data export` to use any destination:
+
+- **GitHub** uploads yearly CSV files to the private `health` repository.
+- **Notion** imports daily health metrics and workouts into the
+  [Hadge health template](https://app.notion.com/p/Hadge-41e86019c92c81e8bf9dcbc142ba8003).
+  The integration token is stored in the iOS Keychain. Duplicate the template,
+  connect the copy to the Hadge integration, and paste the copied page URL into
+  the app.
+- **JSON** writes a complete snapshot containing daily summaries, workouts, and
+  enabled raw HealthKit records.
+- **CSV** writes separate daily-health, workouts, and raw-health files.
+
+The template schema and incremental sync behavior are documented in
+[Docs/NotionHealthTemplate.md](Docs/NotionHealthTemplate.md).
 
 ## TestFlight Beta
 
@@ -92,9 +112,16 @@ the project
 
 This Privacy Policy describes how your personal information is handled in Hadge for iOS.
 
-We do not collect, use, save, or shared any of your personal data. Hadge exports your workout data to a private GitHub repository in your personal GitHub account. To do this, the app needs access to your Health data. You can choose to disable this at any time in the Health app or by deinstalling Hadge app.
+We do not collect, use, save, or share data on our own servers. Hadge sends
+health data directly to destinations selected by the user: a private GitHub
+repository, a Notion workspace, or files shared from the device. To do this,
+the app needs access to your Health data. You can choose to disable this at any
+time in the Health app or by uninstalling Hadge.
 
-Hadge does not collect any data for any other purposes, and does not send any data to any service other than GitHub. The connection between Hadge and GitHub is directly established through the GitHub API, secured by SSL, and authenticated through your GitHub user. You can delete this connection at any time by revoking the token in your GitHub account settings or by deinstalling Hadge app.
+Hadge does not collect data for any other purpose. Connections to GitHub and
+Notion are made directly through their APIs and authenticated with user-provided
+credentials. You can remove those connections by signing out in Hadge or
+revoking the token at the provider.
 
 We don’t collect personal information from anyone, including children under the age of 13.
 

@@ -16,6 +16,7 @@ class WorkoutsViewController: EntireTableViewController {
     private var journalHeader: WorkoutDashboardHeaderView?
     private var heroWorkout: HKWorkout?
     private var recentWorkouts: [HKWorkout] = []
+    private var didOpenRequestedWorkout = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -413,6 +414,7 @@ class WorkoutsViewController: EntireTableViewController {
             self.tableView.reloadData()
             self.sizeJournalHeader()
             self.saveState()
+            self.openRequestedWorkoutIfNeeded()
         }
     }
 
@@ -433,6 +435,20 @@ class WorkoutsViewController: EntireTableViewController {
     private func workoutForSelectedDate(_ workouts: [HKWorkout]) -> HKWorkout? {
         workouts.first {
             WorkoutPresentation.calendar.isDate($0.startDate, inSameDayAs: selectedDate)
+        }
+    }
+
+    private func openRequestedWorkoutIfNeeded() {
+        guard !didOpenRequestedWorkout,
+              ProcessInfo.processInfo.environment["HADGE_OPEN_LATEST_WORKOUT"] == "1",
+              let workout = heroWorkout ?? recentWorkouts.first else {
+            return
+        }
+
+        didOpenRequestedWorkout = true
+        selectedWorkout = workout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.performSegue(withIdentifier: "DetailSegue", sender: self)
         }
     }
 }

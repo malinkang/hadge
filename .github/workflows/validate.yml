@@ -28,6 +28,15 @@ jobs:
       - name: Install build tools
         run: brew install sourcery swiftlint
 
+      - name: Test export serialization
+        run: |
+          xcrun swiftc \
+            -swift-version 5 \
+            Hadge/Models/ExportModels.swift \
+            Tests/ExportSerializationTests.swift \
+            -o "$RUNNER_TEMP/hadge-export-tests"
+          "$RUNNER_TEMP/hadge-export-tests"
+
       - name: Create local build configuration
         shell: bash
         env:
