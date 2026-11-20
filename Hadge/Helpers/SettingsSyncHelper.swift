@@ -12,13 +12,13 @@ class SettingsSyncHelper: NSObject {
 
         switch cellForRow {
         case 0:
-            cell.textLabel?.text = "Re-upload all data"
+            cell.textLabel?.text = "重新上传全部数据"
             cell.detailTextLabel?.text = nil
             cell.accessoryView = nil
         default:
             let module = HealthExportModule.allCases[cellForRow - 1]
             cell.textLabel?.text = module.title
-            cell.detailTextLabel?.text = "Export to \(module.rawValue)/YYYY.csv"
+            cell.detailTextLabel?.text = "导出到 \(module.rawValue)/YYYY.csv"
             let toggle = UISwitch()
             toggle.isOn = module.isEnabled
             toggle.accessibilityIdentifier = module.rawValue

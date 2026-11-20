@@ -34,7 +34,7 @@
         <!--Settings View Controller-->
         <scene sceneID="Y9e-5R-yNy">
             <objects>
-                <tableViewController title="Settings Controller" id="Zm0-Rr-KoY" userLabel="Settings View Controller" customClass="SettingsViewController" customModule="Hadge" customModuleProvider="target" sceneMemberID="viewController">
+                <tableViewController storyboardIdentifier="SettingsViewController" title="Settings Controller" id="Zm0-Rr-KoY" userLabel="Settings View Controller" customClass="SettingsViewController" customModule="Hadge" customModuleProvider="target" sceneMemberID="viewController">
                     <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="grouped" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="18" sectionFooterHeight="18" id="zbh-fS-iU2">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="838"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>

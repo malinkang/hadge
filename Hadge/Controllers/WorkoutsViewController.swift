@@ -3,24 +3,49 @@ import HealthKit
 import SDWebImage
 import SwiftDate
 
+// swiftlint:disable:next type_body_length
 class WorkoutsViewController: EntireTableViewController {
     var data: [[String: Any]] = []
-    var statusLabel: UILabel?
     var filter: [UInt] = []
-    var filterButton: UIBarButtonItem?
     var dataLoaded: Bool = false
+    private var selectedDate = WorkoutPresentation.startOfDay(Date())
+    private var selectedYear = DashboardCalendar.calendar.component(.year, from: Date())
+    private var selectedFamily: WorkoutActivityFamily = .running
+    private var allWorkouts: [HKWorkout] = []
+    private var selectedWorkout: HKWorkout?
+    private var journalHeader: WorkoutDashboardHeaderView?
+    private var heroWorkout: HKWorkout?
+    private var recentWorkouts: [HKWorkout] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         self.extendedLayoutIncludesOpaqueBars = true
-        self.tableView.reloadData()
+        tableView.backgroundColor = UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor.systemBackground
+                : UIColor(red: 0.985, green: 0.982, blue: 0.965, alpha: 1)
+        }
+        tableView.separatorStyle = .none
+        tableView.contentInsetAdjustmentBehavior = .always
+        tableView.register(
+            WorkoutJournalHeroCell.self,
+            forCellReuseIdentifier: WorkoutJournalHeroCell.reuseIdentifier
+        )
+        tableView.register(
+            WorkoutJournalTimelineCell.self,
+            forCellReuseIdentifier: WorkoutJournalTimelineCell.reuseIdentifier
+        )
+        tableView.register(
+            WorkoutJournalEmptyCell.self,
+            forCellReuseIdentifier: WorkoutJournalEmptyCell.reuseIdentifier
+        )
 
-        loadAvatar()
         setUpRefreshControl()
         restoreState()
-        loadStatusView()
+        installJournalHeader()
         addObservers()
+        tableView.reloadData()
     }
 
     deinit {
@@ -29,12 +54,19 @@ class WorkoutsViewController: EntireTableViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
+        navigationController?.setToolbarHidden(true, animated: false)
 
         if !GitHub.shared().isSignedIn() || !UserDefaults.standard.bool(forKey: UserDefaultKeys.setupFinished) {
             self.navigationController?.performSegue(withIdentifier: "SetupSegue", sender: nil)
         } else if !dataLoaded {
             GitHub.shared().refreshCurrentUser()
         }
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -50,64 +82,114 @@ class WorkoutsViewController: EntireTableViewController {
     }
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == "FilterSegue" {
-            let filterNavigationViewController = segue.destination as? UINavigationController
-            let filterViewController = filterNavigationViewController?.viewControllers.first as? FilterViewController
-            filterViewController?.delegate = self
-            filterViewController?.preChecked = filter
-        } else if segue.identifier == "DetailSegue" {
+        if segue.identifier == "DetailSegue" {
             let workoutViewController = segue.destination as? WorkoutViewController
-            if let workout = data[tableView.indexPathForSelectedRow!.row]["workout"] as? HKWorkout? {
-                workoutViewController?.workout = workout
-            }
+            workoutViewController?.workout = selectedWorkout
         }
+    }
+
+    override func numberOfSections(in tableView: UITableView) -> Int {
+        return 2
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if dataLoaded && data.count == 0 && filter.count > 0 {
-            tableView.setEmptyMessage("No workouts for the selected filter.")
-            return data.count
-        } else if dataLoaded && data.count == 0 {
-            tableView.setEmptyMessage("No workout data available. Check the permissions for Hadge in Health app if you recently worked out.")
-            return 0
-        } else {
-            tableView.restore()
-            return data.count
-        }
+        return section == 0 ? 1 : recentWorkouts.count
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let identifier = "WorkoutCell"
-        let cell = tableView.dequeueReusableCell(withIdentifier: identifier) as? WorkoutCell
-
-        if let workout = data[indexPath.row]["workout"] as? HKWorkout? {
-            cell?.titleLabel?.text = workout?.workoutActivityType.name
-            if let biologicalSex = Health.shared().getBiologicalSex() {
-                cell?.emojiLabel?.text = workout?.workoutActivityType.associatedEmoji(for: biologicalSex)
-            } else {
-                cell?.emojiLabel?.text = workout?.workoutActivityType.associatedEmoji
+        if indexPath.section == 0 {
+            if !dataLoaded {
+                guard let cell = tableView.dequeueJournalCell(
+                    WorkoutJournalEmptyCell.self,
+                    identifier: WorkoutJournalEmptyCell.reuseIdentifier,
+                    for: indexPath
+                ) else { return UITableViewCell() }
+                cell.configure(title: "正在读取运动", subtitle: "正在从 Apple 健康获取最新记录…")
+                return cell
             }
-            cell?.setStartDate(workout!.startDate)
-            cell?.setDistance(workout!.totalDistance)
-            cell?.setDuration(workout!.duration)
-            cell?.setEnergy(workout!.totalEnergyBurned)
-            cell?.sourceLabel?.text = workout!.sourceRevision.source.name
+
+            if data.isEmpty {
+                guard let cell = tableView.dequeueJournalCell(
+                    WorkoutJournalEmptyCell.self,
+                    identifier: WorkoutJournalEmptyCell.reuseIdentifier,
+                    for: indexPath
+                ) else { return UITableViewCell() }
+                cell.configure(
+                    title: "还没有\(selectedFamily.title)记录",
+                    subtitle: "请确认“健康”App 中已允许 Hadge 读取体能训练数据。"
+                )
+                return cell
+            }
+
+            guard let workout = heroWorkout else {
+                guard let cell = tableView.dequeueJournalCell(
+                    WorkoutJournalEmptyCell.self,
+                    identifier: WorkoutJournalEmptyCell.reuseIdentifier,
+                    for: indexPath
+                ) else { return UITableViewCell() }
+                cell.configure(
+                    title: "休息日",
+                    subtitle: "这一天没有\(selectedFamily.title)记录，可以点击上方热力图切换日期。"
+                )
+                return cell
+            }
+
+            guard let cell = tableView.dequeueJournalCell(
+                WorkoutJournalHeroCell.self,
+                identifier: WorkoutJournalHeroCell.reuseIdentifier,
+                for: indexPath
+            ) else { return UITableViewCell() }
+            cell.configure(with: workout)
+            return cell
         }
 
-        return cell!
+        guard let cell = tableView.dequeueJournalCell(
+            WorkoutJournalTimelineCell.self,
+            identifier: WorkoutJournalTimelineCell.reuseIdentifier,
+            for: indexPath
+        ) else { return UITableViewCell() }
+        cell.configure(with: recentWorkouts[indexPath.row])
+        return cell
     }
 
-    @objc func showFilter(sender: Any) {
-        performSegue(withIdentifier: "FilterSegue", sender: self)
+    override func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let header = WorkoutJournalSectionHeaderView()
+        if section == 0 {
+            let date = "\(WorkoutPresentation.title(for: selectedDate)) · "
+                + WorkoutPresentation.longDate(for: selectedDate)
+            header.configure(title: date, subtitle: nil, isOverline: true)
+        } else {
+            header.configure(title: "最近运动", subtitle: "\(selectedYear) 年的\(selectedFamily.title)记录")
+        }
+        return header
     }
 
-    @objc func showSettings(sender: Any) {
-        performSegue(withIdentifier: "SettingsSegue", sender: self)
+    override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return section == 0 ? 34 : 64
+    }
+
+    override func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return section == 0 ? 4 : 20
+    }
+
+    override func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        return UIView()
+    }
+
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        selectedWorkout = indexPath.section == 0 ? heroWorkout : recentWorkouts[indexPath.row]
+        guard selectedWorkout != nil else { return }
+        performSegue(withIdentifier: "DetailSegue", sender: self)
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        sizeJournalHeader()
     }
 
     @objc func didSignIn() {
         DispatchQueue.main.async {
-            self.loadAvatar()
             self.loadData(false)
         }
     }
@@ -116,7 +198,6 @@ class WorkoutsViewController: EntireTableViewController {
         DispatchQueue.main.async {
             self.data = []
             self.tableView.reloadData()
-            self.loadAvatar()
 
             self.navigationController?.performSegue(withIdentifier: "SetupSegue", sender: nil)
         }
@@ -130,27 +211,29 @@ class WorkoutsViewController: EntireTableViewController {
     }
 
     @objc func collectingActivityData() {
-        updateStatusLabel("Refreshing activity data...")
+        updateStatusLabel("正在刷新活动数据…")
     }
 
     @objc func collectingDistanceData() {
-        updateStatusLabel("Refreshing distance data...")
+        updateStatusLabel("正在刷新距离数据…")
     }
 
     @objc func collectingHealthData(_ notification: Notification) {
-        let title = notification.object as? String ?? "health data"
-        updateStatusLabel("Refreshing \(title.lowercased())...")
+        let title = notification.object as? String ?? "健康数据"
+        updateStatusLabel("正在刷新\(title)…")
     }
 
     @objc func didFinishExport() {
         let lastSyncDate = UserDefaults.standard.object(forKey: UserDefaultKeys.lastSyncDate) as? Date
         let formatter = DateFormatter.init()
-        formatter.dateStyle = .short
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.doesRelativeDateFormatting = true
+        formatter.dateStyle = .medium
         formatter.timeStyle = .short
         if lastSyncDate != nil && data.count > 0 {
-            updateStatusLabel("GitHub last updated on\n\(formatter.string(from: lastSyncDate!)).")
+            updateStatusLabel("已同步 \(formatter.string(from: lastSyncDate!))")
         } else {
-            updateStatusLabel("No update yet.")
+            updateStatusLabel("尚未同步")
         }
     }
 
@@ -169,17 +252,16 @@ class WorkoutsViewController: EntireTableViewController {
                 self.tableView.refreshControl?.beginRefreshing()
             }
 
-            if self.statusLabel != nil {
-                self.statusLabel?.text = "Checking for workouts..."
-            }
+            self.journalHeader?.setSyncStatus("正在读取健康数据…", isActive: true)
         }
     }
 
     func updateStatusLabel(_ text: String) {
         DispatchQueue.main.async {
-            if self.statusLabel != nil {
-                self.statusLabel?.text = text
-            }
+            self.journalHeader?.setSyncStatus(
+                text,
+                isActive: text.contains("刷新") || text.contains("读取")
+            )
         }
     }
 
@@ -191,73 +273,65 @@ class WorkoutsViewController: EntireTableViewController {
         }
     }
 
-    func loadAvatar() {
-        self.navigationItem.leftBarButtonItem = nil
-
-        let avatarButton = UIButton(type: .custom)
-        avatarButton.frame = CGRect(x: 0.0, y: 0.0, width: 34.0, height: 34.0)
-        avatarButton.layer.cornerRadius = 17
-        avatarButton.clipsToBounds = true
-        avatarButton.backgroundColor = UIColor.init(red: 27/255, green: 27/255, blue: 27/255, alpha: 1)
-        avatarButton.addTarget(self, action: #selector(showSettings(sender:)), for: .touchUpInside)
-        let barButtonItem = UIBarButtonItem(customView: avatarButton)
-
-        let username = GitHub.shared().returnAuthenticatedUsername()
-        let avatarURL = "https://github.com/\(username).png?size=102"
-        let imageManager = SDWebImageManager.shared
-        imageManager.loadImage(with: URL(string: avatarURL),
-                               options: [],
-                               progress: nil,
-                               completed: { image, _, _, _, _, _ in
-            avatarButton.setBackgroundImage(image, for: .normal)
-        })
-
-        // Setting the constraints is required to prevent the button size from resetting after segue back from details
-        barButtonItem.customView?.widthAnchor.constraint(equalToConstant: 34).isActive = true
-        barButtonItem.customView?.heightAnchor.constraint(equalToConstant: 34).isActive = true
-
-        self.navigationItem.leftBarButtonItem = barButtonItem
+    func installJournalHeader() {
+        let header = WorkoutDashboardHeaderView()
+        header.onDateSelected = { [weak self] date in
+            self?.selectedDate = WorkoutPresentation.startOfDay(date)
+            self?.rebuildWorkoutSnapshot()
+            self?.tableView.reloadData()
+            self?.sizeJournalHeader()
+        }
+        header.onActivityChanged = { [weak self] family in
+            self?.selectedFamily = family
+            self?.applyFamilyFilter()
+        }
+        header.onYearChanged = { [weak self] year in
+            self?.selectedYear = year
+            self?.selectedDate = DashboardCalendar.date(year: year, month: 1, day: 1) ?? Date()
+            self?.loadData(false)
+        }
+        journalHeader = header
+        tableView.tableHeaderView = header
+        refreshJournalHeader()
     }
 
-    func loadStatusView() {
-        statusLabel = PaddingLabel()
-        statusLabel?.translatesAutoresizingMaskIntoConstraints = false
-        statusLabel?.text = "No update yet."
-        statusLabel?.textAlignment = .center
-        statusLabel?.textColor = UIColor.secondaryLabel
-        statusLabel?.font = UIFont.preferredFont(forTextStyle: .footnote)
-        statusLabel?.lineBreakMode = .byWordWrapping
-        statusLabel?.numberOfLines = 2
-        statusLabel?.preferredMaxLayoutWidth = 300
+    func refreshJournalHeader() {
+        let workouts = data.compactMap { $0["workout"] as? HKWorkout }
+        let lastSyncDate = UserDefaults.standard.object(forKey: UserDefaultKeys.lastSyncDate) as? Date
+        let syncText: String
+        if let lastSyncDate {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.locale = Locale(identifier: "zh_CN")
+            formatter.unitsStyle = .short
+            syncText = "同步于 \(formatter.localizedString(for: lastSyncDate, relativeTo: Date()))"
+        } else {
+            syncText = "尚未同步"
+        }
 
-        let statusContainer = UIView()
-        statusContainer.translatesAutoresizingMaskIntoConstraints = false
-        statusContainer.addSubview(statusLabel!)
+        journalHeader?.render(
+            family: selectedFamily,
+            year: selectedYear,
+            selectedDate: selectedDate,
+            workouts: workouts,
+            syncText: syncText,
+            isLoading: !dataLoaded
+        )
+    }
 
-        NSLayoutConstraint.activate([
-            statusLabel!.leadingAnchor.constraint(equalTo: statusContainer.leadingAnchor, constant: 8),
-            statusLabel!.trailingAnchor.constraint(equalTo: statusContainer.trailingAnchor, constant: -8),
-            statusLabel!.topAnchor.constraint(equalTo: statusContainer.topAnchor),
-            statusLabel!.bottomAnchor.constraint(equalTo: statusContainer.bottomAnchor)
-        ])
-
-        let widthConstraint = statusContainer.widthAnchor.constraint(equalToConstant: 200)
-        widthConstraint.priority = .defaultLow
-        widthConstraint.isActive = true
-
-        let statusItem = UIBarButtonItem(customView: statusContainer)
-        statusItem.customView?.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        statusItem.customView?.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-        filterButton = UIBarButtonItem(image: UIImage(systemName: "line.horizontal.3.decrease.circle"), style: .plain, target: self, action: #selector(showFilter(sender:)))
-        filterButton?.tintColor = (self.filter.isEmpty ? UIColor.secondaryLabel : UIColor.systemBlue)
-        let rightButtonItem = UIBarButtonItem(image: UIImage(systemName: "safari"), style: .plain, target: self, action: #selector(openSafari(sender:)))
-        rightButtonItem.tintColor = UIColor.secondaryLabel
-
-        let leftSpaceItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let rightSpaceItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-
-        self.toolbarItems = [filterButton!, leftSpaceItem, statusItem, rightSpaceItem, rightButtonItem]
+    func sizeJournalHeader() {
+        guard let header = journalHeader, tableView.bounds.width > 0 else { return }
+        let size = header.systemLayoutSizeFitting(
+            CGSize(width: tableView.bounds.width, height: UIView.layoutFittingCompressedSize.height),
+            withHorizontalFittingPriority: .required,
+            verticalFittingPriority: .fittingSizeLevel
+        )
+        let width = tableView.bounds.width
+        guard abs(header.frame.width - width) > 0.5
+                || abs(header.frame.height - size.height) > 0.5 else {
+            return
+        }
+        header.frame = CGRect(x: 0, y: 0, width: width, height: size.height)
+        tableView.tableHeaderView = header
     }
 
     func setUpRefreshControl() {
@@ -266,7 +340,7 @@ class WorkoutsViewController: EntireTableViewController {
     }
 
     func restoreState() {
-        self.filter = UserDefaults.standard.array(forKey: UserDefaultKeys.workoutFilter) as? [UInt] ?? [UInt]()
+        filter = [selectedFamily.activityType.rawValue]
     }
 
     func saveState() {
@@ -291,13 +365,13 @@ class WorkoutsViewController: EntireTableViewController {
     }
 
     func loadWorkouts(_ visible: Bool = true) {
-        Health.shared().getWorkouts { workouts in
-            self.data = []
+        let interval = DashboardCalendar.yearInterval(selectedYear)
+        Health.shared().getWorkoutsForDates(start: interval.start, end: interval.end) { workouts in
+            self.allWorkouts = (workouts as? [HKWorkout] ?? []).sorted {
+                $0.startDate > $1.startDate
+            }
             self.dataLoaded = true
-
-            guard let workouts = workouts, workouts.count > 0 else { self.reloadWithEmptyWorkout(); return }
-
-            self.createDataFromWorkouts(workouts: workouts)
+            self.applyFamilyFilter()
         }
         BackgroundTaskHelper.shared().handleForegroundFetch()
     }
@@ -305,40 +379,70 @@ class WorkoutsViewController: EntireTableViewController {
     func reloadWithEmptyWorkout() {
         DispatchQueue.main.async {
             self.stopRefreshing(true)
-            self.tableView.reloadSections([ 0 ], with: .automatic)
+            self.data = []
+            self.rebuildWorkoutSnapshot()
+            self.tableView.reloadData()
+            self.sizeJournalHeader()
         }
     }
 
-    func createDataFromWorkouts(workouts: [HKSample]) {
-        workouts.forEach { workout in
-            guard let workout = workout as? HKWorkout else { return }
-            if filter.isEmpty || filter.firstIndex(of: workout.workoutActivityType.rawValue) != nil {
-                data.append([
+    func applyFamilyFilter() {
+        DispatchQueue.main.async {
+            let workouts = self.allWorkouts.filter(self.selectedFamily.matches)
+            guard !workouts.isEmpty else {
+                self.filter = [self.selectedFamily.activityType.rawValue]
+                self.reloadWithEmptyWorkout()
+                return
+            }
+
+            if WorkoutPresentation.calendar.component(.year, from: self.selectedDate) != self.selectedYear {
+                self.selectedDate = WorkoutPresentation.startOfDay(workouts[0].startDate)
+            } else if self.workoutForSelectedDate(workouts) == nil {
+                self.selectedDate = WorkoutPresentation.startOfDay(workouts[0].startDate)
+            }
+
+            self.filter = [self.selectedFamily.activityType.rawValue]
+            self.data = workouts.map { workout in
+                [
                     "title": workout.workoutActivityType.name,
                     "workout": workout
-                ])
+                ]
             }
-        }
-
-        DispatchQueue.main.async {
             self.stopRefreshing(true)
-            self.tableView.reloadSections([ 0 ], with: .automatic)
+            self.rebuildWorkoutSnapshot()
+            self.tableView.reloadData()
+            self.sizeJournalHeader()
             self.saveState()
+        }
+    }
+
+    func rebuildWorkoutSnapshot() {
+        let workouts = data.compactMap { $0["workout"] as? HKWorkout }
+        let selectedWorkouts = workouts.filter {
+            WorkoutPresentation.calendar.isDate($0.startDate, inSameDayAs: selectedDate)
+        }
+        heroWorkout = selectedWorkouts.first
+        if let heroWorkout {
+            recentWorkouts = workouts.filter { $0.uuid != heroWorkout.uuid }
+        } else {
+            recentWorkouts = workouts
+        }
+        refreshJournalHeader()
+    }
+
+    private func workoutForSelectedDate(_ workouts: [HKWorkout]) -> HKWorkout? {
+        workouts.first {
+            WorkoutPresentation.calendar.isDate($0.startDate, inSameDayAs: selectedDate)
         }
     }
 }
 
-extension WorkoutsViewController: FilterDelegate {
-    func onFilterSelected(workoutTypes: [UInt]) {
-        if !filter.elementsEqual(workoutTypes) {
-            filter = workoutTypes
-            if filter.isEmpty {
-                self.filterButton?.tintColor = UIColor.secondaryLabel
-            } else {
-                self.filterButton?.tintColor = UIColor.systemBlue
-            }
-            self.loadData(false)
-            self.saveState()
-        }
+private extension UITableView {
+    func dequeueJournalCell<Cell: UITableViewCell>(
+        _ type: Cell.Type,
+        identifier: String,
+        for indexPath: IndexPath
+    ) -> Cell? {
+        dequeueReusableCell(withIdentifier: identifier, for: indexPath) as? Cell
     }
 }

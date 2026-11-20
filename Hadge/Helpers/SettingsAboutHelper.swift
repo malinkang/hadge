@@ -10,9 +10,9 @@ class SettingsAboutHelper {
         switch cellForRow {
         case 0:
             cell.accessoryView = UIImageView.init(image: UIImage.init(systemName: "link"))
-            cell.textLabel?.text = "Source Code"
+            cell.textLabel?.text = "开源代码"
         default:
-            cell.textLabel?.text = "Undefined"
+            cell.textLabel?.text = "未定义"
         }
 
         return cell

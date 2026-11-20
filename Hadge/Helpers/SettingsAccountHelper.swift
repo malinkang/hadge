@@ -23,7 +23,7 @@ class SettingsAccountHelper {
             let identifier = "SettingsCell"
             let cell = tableView.dequeueReusableCell(withIdentifier: identifier) ?? UITableViewCell.init(style: .subtitle, reuseIdentifier: identifier)
             cell.separatorInset = UIEdgeInsets.init(top: 0, left: 15.0, bottom: 0, right: 0)
-            cell.textLabel?.text = "Sign out"
+            cell.textLabel?.text = "退出登录"
             cell.textLabel?.textColor = UIColor.systemRed
             return cell
         }

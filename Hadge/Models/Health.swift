@@ -14,14 +14,14 @@ enum HealthExportModule: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .body: return "Body measurements"
-        case .heartRate: return "Heart rate summaries"
-        case .vitals: return "Heart and vital signs"
-        case .sleep: return "Sleep"
-        case .bloodPressure: return "Blood pressure"
-        case .nutrition: return "Nutrition and water"
-        case .mobility: return "Mobility"
-        case .mindfulness: return "Mindfulness"
+        case .body: return "身体测量"
+        case .heartRate: return "每日心率"
+        case .vitals: return "生命体征"
+        case .sleep: return "睡眠"
+        case .bloodPressure: return "血压"
+        case .nutrition: return "营养与饮水"
+        case .mobility: return "行动能力"
+        case .mindfulness: return "正念"
         }
     }
 

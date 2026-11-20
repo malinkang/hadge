@@ -4,11 +4,19 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        // Uncomment if we need the scene
-        // guard let windowScene = (scene as? UIWindowScene) else { return }
-
-        // Prepare GitHub Auth
         GitHub.shared().prepare()
+        guard let windowScene = scene as? UIWindowScene else { return }
+        let storyboard = UIStoryboard(name: "Main", bundle: Bundle.main)
+        let root = window?.rootViewController
+            ?? storyboard.instantiateInitialViewController()
+        guard let workoutsNavigation = root as? UINavigationController else { return }
+
+        let appWindow = window ?? UIWindow(windowScene: windowScene)
+        window = appWindow
+        appWindow.rootViewController = AppTabBarController(
+            workoutsNavigationController: workoutsNavigation
+        )
+        appWindow.makeKeyAndVisible()
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

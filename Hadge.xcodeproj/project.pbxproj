@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1DAB0012F00000100000001 /* DashboardHealthData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1DAB0022F00000100000001 /* DashboardHealthData.swift */; };
+		A1DAB0012F00000100000002 /* DashboardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1DAB0022F00000100000002 /* DashboardViews.swift */; };
+		A1DAB0012F00000100000003 /* DashboardControllers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1DAB0022F00000100000003 /* DashboardControllers.swift */; };
 		4D280C152479930100D9162E /* WorkoutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D280C142479930100D9162E /* WorkoutViewController.swift */; };
 		4D35BD0B24A63D6C00008A29 /* OctoKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4D35BD0A24A63D6C00008A29 /* OctoKit */; };
 		4D3C7DFA2480C77E000AF3D6 /* SplitsDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D3C7DF92480C77E000AF3D6 /* SplitsDataSource.swift */; };
@@ -55,6 +58,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A1DAB0022F00000100000001 /* DashboardHealthData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHealthData.swift; sourceTree = "<group>"; };
+		A1DAB0022F00000100000002 /* DashboardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViews.swift; sourceTree = "<group>"; };
+		A1DAB0022F00000100000003 /* DashboardControllers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardControllers.swift; sourceTree = "<group>"; };
 		4D280C142479930100D9162E /* WorkoutViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutViewController.swift; sourceTree = "<group>"; };
 		4D3C7DF92480C77E000AF3D6 /* SplitsDataSource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SplitsDataSource.swift; sourceTree = "<group>"; };
 		4D3C7E002481517F000AF3D6 /* WorkoutActivityTypeExtension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WorkoutActivityTypeExtension.swift; sourceTree = "<group>"; };
@@ -124,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				4D6B4B61246D8B5800847D49 /* AccountCell.swift */,
+				A1DAB0022F00000100000002 /* DashboardViews.swift */,
 				4DF685A32465AEDC00D929EC /* FilterHeaderView.swift */,
 				4DF685A52465B21F00D929EC /* FilterHeaderView.xib */,
 				4DB3F6822453F7B0004C8BF3 /* LaunchScreen.storyboard */,
@@ -138,6 +145,7 @@
 		4D3DFA4B247056C900EDCBEC /* Controllers */ = {
 			isa = PBXGroup;
 			children = (
+				A1DAB0022F00000100000003 /* DashboardControllers.swift */,
 				4D3DFA33246F125800EDCBEC /* EntireViewController.swift */,
 				4DF685A02464D0EE00D929EC /* FilterViewController.swift */,
 				4D563CEF24634D010034D2CF /* HealthRequestViewController.swift */,
@@ -154,6 +162,7 @@
 		4D3DFA4C247056D900EDCBEC /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A1DAB0022F00000100000001 /* DashboardHealthData.swift */,
 				4DAE94C1246B9C130036AC72 /* DistanceDataSource.swift */,
 				4DEA77F12454843400554793 /* GitHub.swift */,
 				4DD70CC1245DE64B007C8D58 /* Health.swift */,
@@ -374,6 +383,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1DAB0012F00000100000003 /* DashboardControllers.swift in Sources */,
+				A1DAB0012F00000100000002 /* DashboardViews.swift in Sources */,
+				A1DAB0012F00000100000001 /* DashboardHealthData.swift in Sources */,
 				4D563CF024634D010034D2CF /* HealthRequestViewController.swift in Sources */,
 				4DEA77F22454843400554793 /* GitHub.swift in Sources */,
 				4DCEDB082462736C00510195 /* SetupPageViewController.swift in Sources */,

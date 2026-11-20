@@ -10,13 +10,13 @@ class SettingsDebugHelper {
 
         switch cellForRow {
         case 0:
-            cell.textLabel?.text = "Force upload on next refresh"
+            cell.textLabel?.text = "下次刷新时强制上传"
         case 1:
-            cell.textLabel?.text = "Force upload workouts now"
+            cell.textLabel?.text = "立即强制上传运动"
         case 2:
-            cell.textLabel?.text = "Show setup flow on next launch"
+            cell.textLabel?.text = "下次启动显示设置流程"
         default:
-            cell.textLabel?.text = "Undefined"
+            cell.textLabel?.text = "未定义"
         }
 
         return cell

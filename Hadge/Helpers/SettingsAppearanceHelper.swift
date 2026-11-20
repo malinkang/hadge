@@ -11,16 +11,16 @@ class SettingsAppearanceHelper {
 
         switch cellForRow {
         case 0:
-            cell.textLabel?.text = "Automatic"
+            cell.textLabel?.text = "跟随系统"
             cell.accessoryType = (self.overrideUserInterfaceStyle == .unspecified ? .checkmark : .none)
         case 1:
-            cell.textLabel?.text = "Dark"
+            cell.textLabel?.text = "深色"
             cell.accessoryType = (self.overrideUserInterfaceStyle == .dark ? .checkmark : .none)
         case 2:
-            cell.textLabel?.text = "Light"
+            cell.textLabel?.text = "浅色"
             cell.accessoryType = (self.overrideUserInterfaceStyle == .light ? .checkmark : .none)
         default:
-            cell.textLabel?.text = "Undefined"
+            cell.textLabel?.text = "未定义"
         }
 
         return cell

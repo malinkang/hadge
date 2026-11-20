@@ -37,6 +37,11 @@ class SettingsViewController: EntireTableViewController {
     var aboutHelper = SettingsAboutHelper()
     var syncHelper = SettingsSyncHelper()
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        title = "设置"
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
@@ -96,15 +101,15 @@ class SettingsViewController: EntireTableViewController {
     override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         switch SettingsSections.build(with: section) {
         case .account:
-            return "Account"
+            return "账号"
         case .appearance:
-            return "Appearance"
+            return "外观"
         case .sync:
-            return "Sync"
+            return "同步"
         case .about:
-            return "About"
+            return "关于"
         case .debug:
-            return "Debug"
+            return "调试"
         }
     }
 
@@ -115,13 +120,13 @@ class SettingsViewController: EntireTableViewController {
         case .appearance:
             return nil
         case .sync:
-            return "Choose which additional HealthKit modules Hadge exports. Turning a module off stops future uploads but never deletes existing GitHub files. Re-upload all data refreshes activity, distance, workout, and enabled health data for every available year."
+            return "选择需要导出到 GitHub 的 HealthKit 数据。关闭模块只会停止后续上传，不会删除已有文件。重新上传会刷新所有可用年份的活动、距离、运动和健康数据。"
         case .about:
             let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
             let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
-            return "You are using Hadge \(version!) (\(build!)).\nMade with ❤️ in Seattle."
+            return "Hadge \(version!) (\(build!))\n健康数据只会上传到你的 GitHub 私有健康仓库。"
         case .debug:
-            return "This section will be removed in the release build."
+            return "此区域只会在调试构建中显示。"
         }
     }
 

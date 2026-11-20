@@ -45,7 +45,7 @@ class GitHub {
                 var components = URLComponents(string: "https://github.com/login/oauth/authorize")!
                 components.queryItems = [
                     URLQueryItem(name: "client_id", value: Secrets.gitHubClientId),
-                    URLQueryItem(name: "redirect_uri", value: "hadge://oauth-callback"),
+                    URLQueryItem(name: "redirect_uri", value: "hadge://github"),
                     URLQueryItem(name: "scope", value: "repo"),
                     URLQueryItem(name: "allow_signup", value: "false")
                 ]
